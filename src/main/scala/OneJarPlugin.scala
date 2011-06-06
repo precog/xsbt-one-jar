@@ -12,14 +12,14 @@ object OneJarPlugin extends Plugin {
     oneJarTask <<= oneJarTaskImpl
   )
 
-  private def inJarsTaskImpl = (dependencyClasspath in Compile, oneJarInJars) map {
-    (dependencyClasspath, oneJarInJars) => 
+  private def inJarsTaskImpl = (dependencyClasspath in Compile, classDirectory in Compile, oneJarInJars) map {
+    (dependencyClasspath, classDirectory, oneJarInJars) => 
       import Build.data
-      data(dependencyClasspath) ++ oneJarInJars
+      data(dependencyClasspath) ++ oneJarInJars :+ classDirectory
   }
  
-  private def oneJarTaskImpl = (oneJarInJarsTask, mainClass, name, version, target) map {
-    (dependencies, mainClass, name, version, target) => {
+  private def oneJarTaskImpl = (compile in Compile, oneJarInJarsTask, mainClass, name, version, target) map {
+    (_, dependencies, mainClass, name, version, target) => {
       import java.io.{ByteArrayInputStream, File}
       import java.util.jar.Manifest
       import org.apache.commons.io.FileUtils
