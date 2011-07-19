@@ -5,11 +5,13 @@ object OneJarPlugin extends Plugin {
   val oneJarTask = TaskKey[Unit]("one-jar")
   val oneJarInJars = SettingKey[Seq[File]]("one-jar-in-jars")
   val oneJarInJarsTask = TaskKey[Seq[File]]("one-jar-in-jars-task")
+  val oneJarExcludeJars = SettingKey[NameFilter]("one-jar-exclude-jars")
  
   val oneJarSettings = Seq(
     oneJarInJars <<= (scalaInstance) { (si) => Seq(si.libraryJar) },
     oneJarInJarsTask <<= inJarsTaskImpl,
-    oneJarTask <<= oneJarTaskImpl
+    oneJarTask <<= oneJarTaskImpl,
+    oneJarExcludeJars := NothingFilter
   )
 
   private def inJarsTaskImpl = (dependencyClasspath in Compile, classDirectory in Compile, oneJarInJars) map {
@@ -18,8 +20,8 @@ object OneJarPlugin extends Plugin {
       data(dependencyClasspath) ++ oneJarInJars :+ classDirectory
   }
  
-  private def oneJarTaskImpl = (compile in Compile, oneJarInJarsTask, mainClass, name, version, target) map {
-    (_, dependencies, mainClass, name, version, target) => {
+  private def oneJarTaskImpl = (compile in Compile, oneJarInJarsTask, oneJarExcludeJars, mainClass, name, version, target) map {
+    (_, dependencies, excludes, mainClass, name, version, target) => {
       import java.io.{ByteArrayInputStream, File}
       import java.util.jar.Manifest
       import org.apache.commons.io.FileUtils
@@ -38,10 +40,11 @@ object OneJarPlugin extends Plugin {
         case _ => version.toString
       }
 
+      val includes = -excludes
       IO.withTemporaryDirectory { tmpDir =>
         new File(tmpDir, "META-INF").mkdirs
 
-        for (dependency <- dependencies) {
+        for (dependency <- dependencies if includes.accept(dependency)) {
           try {
             if (dependency.getName.toLowerCase.endsWith("jar")) {
               println("Unzipping " + dependency + " to " + tmpDir)
