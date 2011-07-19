@@ -39,12 +39,13 @@ object OneJarPlugin extends Plugin {
       }
 
       IO.withTemporaryDirectory { tmpDir =>
-        for (dependency <- dependencies) {
-          println("Unzipping " + dependency + " to " + tmpDir)
+        new File(tmpDir, "META-INF").mkdirs
 
+        for (dependency <- dependencies) {
           try {
             if (dependency.getName.toLowerCase.endsWith("jar")) {
-              IO.unzip(dependency, tmpDir)
+              println("Unzipping " + dependency + " to " + tmpDir)
+              IO.unzip(dependency, tmpDir, !(_: String).contains("LICENSE"))
             } else if (dependency.isDirectory) {
               IO.copyDirectory(dependency, tmpDir, true)
             } else {
